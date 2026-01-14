@@ -1,0 +1,58 @@
+; Bongo Cat Auto-Key-Presser (Advanced Polite Method)
+;
+;
+; 1. Randomized Keys: It presses one of several "phantom" keys at random to make input less robotic.
+; 2. High-Responsiveness Pausing: It uses a high-frequency timer to check for user input,
+;    making the pause for modifier keys.
+;
+; --- CONTROLS ---
+; F8     : Press F8 to Start or Stop the auto-key-presser.
+; Escape : Press the Escape key to exit the script completely.
+
+#SingleInstance, Force
+#Persistent ; Keeps the script running to allow for the high-frequency timer.
+SetBatchLines, -1
+
+; --- CONFIGURATION ---
+KEYS_TO_PRESS := ["F21", "F22", "F23", "F24"] ; A pool of safe keys to press at random.
+PRESS_INTERVAL_MS := 10        ; How often to press a key (in milliseconds).
+CHECK_INTERVAL_MS := 5         ; How often to check for user input (for pausing).
+
+; --- MAIN SCRIPT LOGIC ---
+global Toggle := false
+global lastPressTime := 0
+
+F8::
+    Toggle := !Toggle
+    if (Toggle) {
+        lastPressTime := A_TickCount ; Reset timer when starting
+        SetTimer, MainLoop, %CHECK_INTERVAL_MS%
+    } else {
+        SetTimer, MainLoop, Off
+    }
+return
+
+MainLoop:
+    ; THE FIX: This loop runs very fast (every 10ms) to check for user input.
+    if GetKeyState("Shift", "P") or GetKeyState("Control", "P") or GetKeyState("Alt", "P") or GetKeyState("LButton", "P") or GetKeyState("RButton", "P")
+        return ; Instantly skip if a modifier is held.
+
+    ; Now, check if enough time has passed to send the NEXT keypress.
+    if (A_TickCount - lastPressTime > PRESS_INTERVAL_MS)
+    {
+        lastPressTime := A_TickCount ; Update the time of our last press.
+
+        ; Randomly pick one of the keys from our pool.
+        Random, index, 1, % KEYS_TO_PRESS.MaxIndex()
+        key := KEYS_TO_PRESS[index]
+
+        ; Send the randomized key.
+        Send, {%key% down}
+        Sleep, 1
+        Send, {%key% up}
+    }
+return
+
+Esc::
+    ExitApp
+return
